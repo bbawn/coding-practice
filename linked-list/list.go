@@ -2,13 +2,14 @@ package list
 
 // linked-list coding exercise. See https://leetcode.com/problems/design-linked-list/
 
-type Element struct {
-	Val  int
-	Next *Element
+type element struct {
+	val  int
+	next *element
 }
 
 type LinkedList struct {
-	Head *Element
+	// root is a sentinel element - it's next element is the start of the list
+	root element
 }
 
 func Constructor() LinkedList {
@@ -16,34 +17,29 @@ func Constructor() LinkedList {
 }
 
 func (ll *LinkedList) Get(index int) int {
-	e := ll.Head
+	e := ll.root.next
 
 	for i := 0; i < index && e != nil; i++ {
-		e = e.Next
+		e = e.next
 	}
 
 	if e == nil {
 		return -1
 	}
 
-	return e.Val
+	return e.val
 }
 
 func (ll *LinkedList) AddAtHead(val int) {
-	h := ll.Head
-	ll.Head = &Element{val, h}
+	h := ll.root.next
+	ll.root.next = &element{val, h}
 }
 
 func (ll *LinkedList) AddAtTail(val int) {
-	if ll.Head == nil {
-		ll.Head = &Element{val, nil}
-		return
+	var t *element
+	for t = &ll.root; t.next != nil; t = t.next {
 	}
-
-	var t *Element
-	for t = ll.Head; t.Next != nil; t = t.Next {
-	}
-	t.Next = &Element{val, nil}
+	t.next = &element{val, nil}
 }
 
 func (ll *LinkedList) AddAtIndex(index int, val int) {
@@ -51,19 +47,14 @@ func (ll *LinkedList) AddAtIndex(index int, val int) {
 		return
 	}
 
-	if index == 0 {
-		ll.AddAtHead(val)
-		return
-	}
-
-	pred := ll.Head
-	for i := 1; i < index; i++ {
-		pred = pred.Next
+	pred := &ll.root
+	for i := 0; i < index; i++ {
+		pred = pred.next
 		if pred == nil {
 			return
 		}
 	}
-	pred.Next = &Element{val, pred.Next}
+	pred.next = &element{val, pred.next}
 }
 
 func (ll *LinkedList) DeleteAtIndex(index int) {
@@ -71,17 +62,12 @@ func (ll *LinkedList) DeleteAtIndex(index int) {
 		return
 	}
 
-	if index == 0 && ll.Head != nil {
-		ll.Head = ll.Head.Next
-		return
-	}
-
-	pred := ll.Head
-	for i := 1; i < index; i++ {
-		pred = pred.Next
-		if pred.Next == nil {
+	pred := &ll.root
+	for i := 0; i < index; i++ {
+		pred = pred.next
+		if pred.next == nil {
 			return
 		}
 	}
-	pred.Next = pred.Next.Next
+	pred.next = pred.next.next
 }
