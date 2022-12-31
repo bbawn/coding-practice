@@ -5,75 +5,7 @@ import (
 	"testing"
 )
 
-func TestSimple(t *testing.T) {
-	bst := createSimple()
-	expected := []int{4, 7, 9, 11, 13, 15, 17, 22, 28, 30, 32}
-	got := []int{}
-	bst.Walk(func(val int) {
-		got = append(got, val)
-	})
-	if !reflect.DeepEqual(expected, got) {
-		t.Errorf("after Walk() expected %v, got %v", expected, got)
-	}
-
-	min := bst.Min()
-	if min != 4 {
-		t.Errorf("Min() expected 4, got %v", min)
-	}
-
-	max := bst.Max()
-	if max != 32 {
-		t.Errorf("Min() expected 32, got %v", max)
-	}
-
-	node := bst.Search(11)
-	if node == nil {
-		t.Errorf("Search(11) expected non-nil ")
-	} else if node.val != 11 {
-		t.Errorf("Search(11) expected val 11, got %d", node.val)
-	}
-
-	for _, v := range []int{3, 14, 55} {
-		node = bst.Search(v)
-		if node != nil {
-			t.Errorf("Search(%d) expected nil", v)
-		}
-	}
-
-	for _, v := range [][]int{{4, 7}, {9, 11}, {11, 13}} {
-		node = bst.Search(v[0])
-		node = node.Successor()
-		if node == nil {
-			t.Errorf("Successor of %d expected %d got nil", v[0], v[1])
-		} else if node.val != v[1] {
-			t.Errorf("Successor of %d expected %d got %d", v[0], v[1], node.val)
-		}
-	}
-
-	node = bst.Search(32)
-	node = node.Successor()
-	if node != nil {
-		t.Errorf("Successor of 32 expected nil got %d", node.val)
-	}
-
-	for _, v := range [][]int{{22, 17}, {11, 9}, {28, 22}} {
-		node = bst.Search(v[0])
-		node = node.Predecessor()
-		if node == nil {
-			t.Errorf("Predecessor of %d expected %d got nil", v[0], v[1])
-		} else if node.val != v[1] {
-			t.Errorf("Predecessor of %d expected %d got %d", v[0], v[1], node.val)
-		}
-	}
-
-	node = bst.Search(4)
-	node = node.Predecessor()
-	if node != nil {
-		t.Errorf("Predecessor of 4 expected nil got %d", node.val)
-	}
-}
-
-func createSimple() BST {
+func createSimple() *BST {
 	n4 := &Node{val: 4}
 	n7 := &Node{val: 7}
 	n9 := &Node{val: 9}
@@ -86,7 +18,9 @@ func createSimple() BST {
 	n30 := &Node{val: 30}
 	n32 := &Node{val: 32}
 
-	bst := BST{root: n22}
+	bst := New()
+	bst.root.left = n22
+	n22.parent = &bst.root
 	n22.left = n9
 	n9.parent = n22
 	n22.right = n30
@@ -111,8 +45,93 @@ func createSimple() BST {
 	return bst
 }
 
+func (n *Node) check(t *testing.T, exp *Node) {
+	t.Helper()
+	if exp == nil {
+		if n != nil {
+			t.Errorf("check() expected nil, got %v", n.val)
+		}
+		return
+	}
+
+	if n == nil {
+		t.Errorf("check() expected %d, got nil", exp.val)
+	}
+
+	if n.val != exp.val {
+		t.Errorf("check() expected %d, got %d", exp.val, n.val)
+	}
+}
+
+func (bst *BST) check(t *testing.T, expected []int) {
+	t.Helper()
+	got := []int{}
+	bst.Walk(func(val int) {
+		got = append(got, val)
+	})
+	if !reflect.DeepEqual(expected, got) {
+		t.Errorf("check() expected %v, got %v", expected, got)
+	}
+}
+
+func TestSimple(t *testing.T) {
+	bst := createSimple()
+	expected := []int{4, 7, 9, 11, 13, 15, 17, 22, 28, 30, 32}
+	got := []int{}
+	bst.Walk(func(val int) {
+		got = append(got, val)
+	})
+	if !reflect.DeepEqual(expected, got) {
+		t.Errorf("after Walk() expected %v, got %v", expected, got)
+	}
+
+	min := bst.Min()
+	if min != 4 {
+		t.Errorf("Min() expected 4, got %v", min)
+	}
+
+	max := bst.Max()
+	if max != 32 {
+		t.Errorf("Min() expected 32, got %v", max)
+	}
+
+	node := bst.Search(11)
+	node.check(t, &Node{val: 11})
+
+	for _, v := range []int{3, 14, 55} {
+		node = bst.Search(v)
+		if node != nil {
+			t.Errorf("Search(%d) expected nil", v)
+		}
+	}
+
+	for _, v := range [][]int{{4, 7}, {9, 11}, {11, 13}} {
+		node = bst.Search(v[0])
+		node = node.Successor()
+		node.check(t, &Node{val: v[1]})
+	}
+
+	node = bst.Search(32)
+	node = node.Successor()
+	if node != nil {
+		t.Errorf("Successor of 32 expected nil got %d", node.val)
+	}
+
+	for _, v := range [][]int{{22, 17}, {11, 9}, {28, 22}} {
+		node = bst.Search(v[0])
+		node = node.Predecessor()
+		node.check(t, &Node{val: v[1]})
+	}
+
+	node = bst.Search(4)
+	node = node.Predecessor()
+	if node != nil {
+		t.Errorf("Predecessor of 4 expected nil got %d", node.val)
+	}
+}
+
 func TestMutate(t *testing.T) {
-	bst := BST{}
+	bst := New()
 
 	table := []struct {
 		new        int
@@ -125,6 +144,8 @@ func TestMutate(t *testing.T) {
 		{37, &Node{val: 27}, nil},
 		{37, &Node{val: 27}, nil},
 		{4, nil, &Node{val: 7}},
+		{5, &Node{val: 4}, &Node{val: 7}},
+		{12, &Node{val: 7}, &Node{val: 17}},
 	}
 	for _, item := range table {
 		n := bst.Insert(item.new)
@@ -140,6 +161,47 @@ func TestMutate(t *testing.T) {
 			t.Errorf("Insert(%d), Predecessor expected %v got %v", item.new, item.pred, n)
 		}
 	}
+
+	// Insert invalid value
+	n := bst.Insert(-1)
+	if n != nil {
+		t.Errorf("Insert(-1), expected nil got val %d", n.val)
+	}
+
+	// Delete node with only left child
+	n = bst.Delete(17)
+	n.check(t, &Node{val: 17})
+	bst.check(t, []int{4, 5, 7, 12, 27, 37})
+
+	// Delete node with only right child
+	n = bst.Delete(4)
+	n.check(t, &Node{val: 4})
+	bst.check(t, []int{5, 7, 12, 27, 37})
+
+	// Delete node with no children
+	n = bst.Delete(12)
+	n.check(t, &Node{val: 12})
+	bst.check(t, []int{5, 7, 27, 37})
+
+	// Delete node with two children
+	n = bst.Delete(27)
+	n.check(t, &Node{val: 27})
+	bst.check(t, []int{5, 7, 37})
+
+	// Delete top node with two children
+	n = bst.Delete(7)
+	n.check(t, &Node{val: 7})
+	bst.check(t, []int{5, 37})
+
+	// Delete invalid value
+	n = bst.Delete(-1)
+	n.check(t, nil)
+	bst.check(t, []int{5, 37})
+
+	// Delete value not in tree
+	n = bst.Delete(15)
+	n.check(t, nil)
+	bst.check(t, []int{5, 37})
 }
 
 func match(n1, n2 *Node) bool {

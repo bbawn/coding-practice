@@ -3,6 +3,10 @@
 
 package bst
 
+const (
+	invalid = -1
+)
+
 // Node is a node in a binary search tree
 type Node struct {
 	parent      *Node
@@ -12,12 +16,24 @@ type Node struct {
 
 // BST is a binary search tree
 type BST struct {
-	root *Node
+	// root is a sentinel value with an invalid value. This simplifies
+	// implementation because every actual node in the tree has a parent.
+	root Node
+}
+
+// New creates and returns an empty tree
+func New() *BST {
+	return &BST{root: Node{val: invalid}}
 }
 
 // Walk traverses the tree in order, calling f for each node
 func (t *BST) Walk(f func(val int)) {
-	t.root.walk(f)
+	t.root.left.walk(f)
+}
+
+// Empty returns true for a tree with no elements, false otherwise
+func (t *BST) Empty() bool {
+	return t.root.left == nil
 }
 
 func (n *Node) walk(f func(val int)) {
@@ -31,10 +47,10 @@ func (n *Node) walk(f func(val int)) {
 
 // Min returns the minimum value in the tree or -1 for an empty tree
 func (t *BST) Min() int {
-	if t.root == nil {
-		return -1
+	if t.Empty() {
+		return invalid
 	}
-	return t.root.min().val
+	return t.root.left.min().val
 }
 
 func (n *Node) min() *Node {
@@ -46,10 +62,10 @@ func (n *Node) min() *Node {
 
 // Max returns the maximum value in the tree or -1 for an empty tree
 func (t *BST) Max() int {
-	if t.root == nil {
-		return -1
+	if t.Empty() {
+		return invalid
 	}
-	return t.root.max().val
+	return t.root.left.max().val
 }
 
 func (n *Node) max() *Node {
@@ -61,7 +77,7 @@ func (n *Node) max() *Node {
 
 // Search returns a node in the tree with the given value or nil if not found
 func (t *BST) Search(val int) *Node {
-	return t.root.search(val)
+	return t.root.left.search(val)
 }
 
 func (n *Node) search(val int) *Node {
@@ -82,40 +98,57 @@ func (n *Node) search(val int) *Node {
 }
 
 func (n *Node) Successor() *Node {
+	if n == nil {
+		return nil
+	}
 	if n.right != nil {
 		return n.right.min()
 	}
 
 	// Walk upward until path traverses a left edge or top reached
 	var child *Node
-	for child = n; child.parent != nil && child != child.parent.left; child = child.parent {
+	for child = n; child.parent.val != invalid && child != child.parent.left; child = child.parent {
+	}
+
+	if child.parent.val == invalid {
+		return nil
 	}
 
 	return child.parent
 }
 
 func (n *Node) Predecessor() *Node {
+	if n == nil {
+		return nil
+	}
 	if n.left != nil {
 		return n.left.max()
 	}
 
 	// Walk upward until path traverses a right edge or top reached
 	var child *Node
-	for child = n; child.parent != nil && child != child.parent.right; child = child.parent {
+	for child = n; child.parent.val != invalid && child != child.parent.right; child = child.parent {
+	}
+
+	if child.parent.val == invalid {
+		return nil
 	}
 
 	return child.parent
 }
 
 // Insert adds a node with the given value to the tree if it's not already
-// present. Returns the node with the value.
+// present. Returns the node with the value or nil for invalid value.
 func (t *BST) Insert(val int) *Node {
-	if t.root == nil {
-		t.root = &Node{val: val}
-		return t.root
+	if !valid(val) {
+		return nil
+	}
+	if t.Empty() {
+		t.root.left = &Node{val: val, parent: &t.root}
+		return t.root.left
 	}
 
-	n := t.root
+	n := t.root.left
 	for {
 		if val == n.val {
 			return n
@@ -135,12 +168,52 @@ func (t *BST) Insert(val int) *Node {
 	}
 }
 
+func valid(val int) bool {
+	return val >= 0
+}
+
 // Delete removes the node with the given value (if present) from the tree and
 // returns it. Returns nil if tree has no such node.
 func (t *BST) Delete(val int) *Node {
-	n := t.root.search(val)
+	n := t.Search(val)
 	if n == nil {
 		return nil
 	}
+	p := n.parent
+	var child **Node
+	if n == p.left {
+		child = &p.left
+	} else {
+		child = &p.right
+	}
+
+	// Deleted node has no children
+	if n.left == nil && n.right == nil {
+		*child = nil
+		return n
+	}
+
+	// Deleted node only has a left child
+	if n.right == nil {
+		n.left.parent = p
+		*child = n.left
+		return n
+	}
+
+	// Deleted node only has a right child
+	if n.left == nil {
+		n.right.parent = p
+		*child = n.right
+		return n
+	}
+
+	// Deleted node has two children
+	n.left.parent = p
+	*child = n.left
+
+	// Add right to max leaf in left subtree
+	max := n.left.max()
+	max.right = n.right
+
 	return n
 }
